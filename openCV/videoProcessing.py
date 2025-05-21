@@ -1,12 +1,12 @@
-import numpy as np, cv2, mediapipe as mp
+import numpy as np, cv2, mediapipe as mp, time, requests
 cap = cv2.VideoCapture("./WorkingGuy.mp4")
-width  = 320
-height = 515
-startLine = 235
-endLine = 20
+height, width = 515, 320
+# height, width = requests.get('http://192.168.1.4:804/api/workcenterstatus/1WCINJ-008').json()
+startLine, endLine = 235, 20
 state = "start"
 tolerance = 5
 count = 0
+timeStart, timeEnd = 0, 0
 
 mp_drawing = mp.solutions.drawing_utils
 mp_hands = mp.solutions.hands
@@ -23,7 +23,7 @@ while True:
     break
 
   desiredFrame = frame[400:, 300:815] # given in BGR
-  result = hand.process(cv2.cvtColor(desiredFrame, cv2.COLOR_BGR2RGB)) # convert to RGB to use
+  result = hand.process(cv2.cvtColor(desiredFrame, cv2.COLOR_BGR2RGB)) # convert to RGB to process
 
   # Checking for hands
   if result.multi_hand_landmarks:
@@ -37,13 +37,16 @@ while True:
 
       if state == "start":
         if abs(landmark_y_pixel - startLine) <= tolerance:
+          start = time.time()
           state = "waiting to end"
           print("Passed start")
 
       elif state == "waiting to end":
         if abs(landmark_y_pixel - endLine) <= tolerance:
-            state = "counted"
-            count += 1
+            end = time.time()
+            if (end - start) >= 3:
+              count += 1
+              state = "counted"
             print(f"Passed endLine → Counted! Total: {count}")
       
       elif state == "counted":
