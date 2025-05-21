@@ -32,7 +32,6 @@ while True:
       h, w, _ = desiredFrame.shape
       # landmark_x_pixel = int(wrist.x * h)
       landmark_y_pixel = int(wrist.y * h)
-      # print(h)
       # print(landmark_y_pixel)
 
       if state == "start":
