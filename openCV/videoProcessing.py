@@ -98,15 +98,21 @@ import numpy as np, cv2, mediapipe as mp, time, requests
 # cap.release()
 # cv2.destroyAllWindows()
 
-cap = cv2.VideoCapture("./KnobAssembly.MOV")
+cap = cv2.VideoCapture("./KnobWeird.MOV")
 height, width = 515, 320
 
 # Initialize ORB detector outside the loop for better performance
-orb = cv2.ORB_create(nfeatures=1000, patchSize=50, fastThreshold=30)  # Increase features for better detection
+orb = cv2.ORB_create(nfeatures=1000, patchSize=5, fastThreshold=30)  # Increase features for better detection
 
 # Load reference image once
-template = cv2.imread("./Doorknob.jpg", 0)
+template = cv2.imread("./blackKnob.jpg", 0)
 template = cv2.GaussianBlur(template, (5, 5), 10)
+
+# resize template image used
+scale_x = 0.1
+scale_y = 0.1
+template = cv2.resize(template, None, fx=scale_x, fy=scale_y, interpolation=cv2.INTER_AREA)
+
 if template is None:
     print("Error: Could not load reference image 'doorknob.heic'")
     exit(0)
@@ -153,7 +159,7 @@ def draw_enhanced_keypoints_and_matches(frame, template, kp1, kp2, matches):
         matches = sorted(matches, key=lambda x: x.distance)
         
         # Take only the best matches (you can adjust this threshold)
-        distance_threshold = matches[0].distance * 2.5  # Adjust this multiplier
+        distance_threshold = matches[0].distance * 1.0  # Adjust this multiplier
         good_matches = [m for m in matches if m.distance < distance_threshold]
     
     print(f"Total matches: {len(matches)}, Good matches: {len(good_matches)}")
@@ -248,9 +254,23 @@ while True:
     if not ret:
         print("Cannot read frame")
         break
+
+    # (1080, 1920, 3)
+    frame = frame[200:800, 400:1200]
     
     # Convert frame to grayscale for ORB
     frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    result = cv2.matchTemplate(frame_gray, template, cv2.TM_CCOEFF_NORMED)
+
+    # Set a threshold for matching
+    threshold = 0.8
+    locations = np.where(result >= threshold)
+
+    # Draw rectangles around detected objects
+    for point in zip(*locations[::-1]):
+        cv2.rectangle(frame, point, (point[0] + template.shape[0], point[1] + template.shape[1]), (0, 255, 0), 2)
+    
+    cv2.imshow('Object Detection', frame)
     
     # Detect keypoints and descriptors in current frame
     kp2, des2 = orb.detectAndCompute(frame_gray, None)
@@ -315,9 +335,6 @@ while True:
     key = cv2.waitKey(10) & 0xFF
     if key == ord('q'):
         break
-    elif key == ord('s'):
-        cv2.imwrite(f'saved_frame_{int(time.time())}.jpg', blurred_frame)
-        print("Frame saved!")
 
 cap.release()
 cv2.destroyAllWindows()
