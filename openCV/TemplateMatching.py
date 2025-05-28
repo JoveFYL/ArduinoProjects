@@ -55,7 +55,6 @@ class WholeObjectCounter:
             self.tracking_zone = (0, height//8, width, 3*height//4)
     
     def detect_objects_template_matching(self, frame):
-        """Detect objects using multi-scale template matching"""
         frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         detections = []
         
@@ -70,7 +69,7 @@ class WholeObjectCounter:
             result = cv2.matchTemplate(frame_gray, scaled_template, cv2.TM_CCOEFF_NORMED)
             
             # Find locations above threshold
-            locations = np.where(result >= self.match_threshold)
+            locations = np.where(result >= self.match_threshold) # returns y_index, x_index
             
             for pt in zip(*locations[::-1]):  # Switch x and y
                 # Calculate center and confidence
@@ -103,48 +102,61 @@ class WholeObjectCounter:
         return detections
     
     def detect_objects_contour_based(self, frame):
-        """Detect circular objects using contour analysis"""
-        # Convert to grayscale
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        
-        # Apply Gaussian blur to reduce noise
         blurred = cv2.GaussianBlur(gray, (5, 5), 2)
         
-        # Use adaptive threshold for better edge detection
-        adaptive_thresh = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
-                                              cv2.THRESH_BINARY, 11, 2)
+        # Use multiple edge detection approaches
+        edges1 = cv2.Canny(blurred, 50, 150)
+        edges2 = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+                                    cv2.THRESH_BINARY, 11, 2)
         
-        # Find contours
-        contours, _ = cv2.findContours(adaptive_thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # Combine edge maps
+        edges = cv2.bitwise_or(edges1, edges2)
+        
+        # Morphological operations to connect broken edges
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+        edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
+        
+        contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         detections = []
         
         for contour in contours:
             area = cv2.contourArea(contour)
             
-            # Filter by area
             if self.min_contour_area < area < self.max_contour_area:
-                # Calculate circularity
+                # Get bounding rectangle
+                x, y, w, h = cv2.boundingRect(contour)
+                center_x = x + w // 2
+                center_y = y + h // 2
+                
+                # Calculate shape metrics
                 perimeter = cv2.arcLength(contour, True)
                 if perimeter > 0:
-                    circularity = 4 * math.pi * area / (perimeter * perimeter)
+                    # Aspect ratio (for elongated objects)
+                    aspect_ratio = max(w, h) / min(w, h)
                     
-                    # Filter by circularity (for circular objects like knobs)
-                    if circularity > self.circularity_threshold:
-                        # Get bounding rectangle
-                        x, y, w, h = cv2.boundingRect(contour)
-                        center_x = x + w // 2
-                        center_y = y + h // 2
-                        
-                        # Calculate confidence based on circularity and area
-                        confidence = circularity * min(1.0, area / self.max_contour_area)
+                    # Extent (object area / bounding rectangle area)
+                    extent = area / (w * h)
+                    
+                    # Solidity (object area / convex hull area)
+                    hull = cv2.convexHull(contour)
+                    hull_area = cv2.contourArea(hull)
+                    solidity = area / hull_area if hull_area > 0 else 0
+                    
+                    # More flexible shape filtering
+                    # Accept objects that are reasonably solid and have good extent
+                    if extent > 0.3 and solidity > 0.5:  # Much more permissive than circularity
+                        confidence = (extent + solidity) / 2  # Combined confidence
                         
                         detections.append({
                             'center': (center_x, center_y),
                             'confidence': confidence,
                             'size': (w, h),
                             'area': area,
-                            'circularity': circularity,
+                            'aspect_ratio': aspect_ratio,
+                            'extent': extent,
+                            'solidity': solidity,
                             'contour': contour
                         })
         
@@ -460,20 +472,9 @@ class WholeObjectCounter:
 
 # Usage examples for different detection methods:
 if __name__ == "__main__":
-    # For circular knobs like yours - try Hough circles first
     counter = WholeObjectCounter("./blackKnob.jpg", 
                                detection_method='combined',
                                belt_direction='horizontal')
-    
-    # Or try template matching for exact shape matching
-    # counter = WholeObjectCounter("./knob_image.jpg", 
-    #                            detection_method='template_matching',
-    #                            belt_direction='horizontal')
-    
-    # Or use combined method for best results
-    # counter = WholeObjectCounter("./knob_image.jpg", 
-    #                            detection_method='combined',
-    #                            belt_direction='horizontal')
-    
+   
     final_count = counter.process_video("./knobWeird.MOV")
     print(f"Total objects counted: {final_count}")

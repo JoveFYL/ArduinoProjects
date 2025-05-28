@@ -1,103 +1,5 @@
 import numpy as np, cv2, mediapipe as mp, time, requests
 
-# cap = cv2.VideoCapture("./BoardAssembly.MOV")
-# height, width = 515, 320 # WorkingGuy
-# pixels = {
-#   "workingGuy": [515, 320],
-#   "BoardAssembly": [515, 320],
-#   "KnobAssembly": [515, 320]
-# }
-
-# desiredFrames = {
-#   "workingGuy": [515, 320],
-#   "BoardAssembly": [515, 320],
-#   "KnobAssembly": [515, 320] 
-# }
-# # height, width = requests.get('http://192.168.1.4:804/api/workcenterstatus/1WCINJ-008').json()
-# startLine, endLine = 235, 20
-# lines = {
-#   "workingGuy": [235, 20],
-#   "BoardAssembly": [235, 20],
-#   "KnobAssembly": [235, 20]
-# }
-# state = "start"
-# tolerance = 5
-# count = 0
-# timeStart, timeEnd = 0, 0
-
-# mp_drawing = mp.solutions.drawing_utils
-# mp_hands = mp.solutions.hands
-# hand = mp_hands.Hands()
-
-# # frame_count = 0
-# # PROCESS_EVERY_N_FRAMES = 2
-
-# if not cap.isOpened():
-#   print("Error opening video")
-#   exit(0)
-
-# while True:
-#   ret, frame = cap.read()
-#   if not ret:
-#     print("cannot read frame")
-#     break
-
-#   # frame_count += 1
-#   # if frame_count % PROCESS_EVERY_N_FRAMES != 0:
-#   #     continue
-
-#   # desiredFrame = frame[400:, 300:815] # given in BGR
-#   frame = cv2.GaussianBlur(frame, (5, 5), 0) # blur frame to remove noise
-#   result = hand.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)) # convert to RGB to process
-
-#   # Checking for hands
-#   if result.multi_hand_landmarks:
-#     for hand_landmarks in result.multi_hand_landmarks:
-#       wrist = hand_landmarks.landmark[8]
-#       # h, w, _ = desiredFrame.shape
-#       h, w, _ = frame.shape
-#       # landmark_x_pixel = int(wrist.x * h)
-#       landmark_y_pixel = int(wrist.y * h)
-#       # print(landmark_y_pixel)
-
-#       if state == "start":
-#         if abs(landmark_y_pixel - startLine) <= tolerance:
-#           start = time.time()
-#           state = "waiting to end"
-#           print("Passed start")
-
-#       elif state == "waiting to end":
-#         if abs(landmark_y_pixel - endLine) <= tolerance:
-#             end = time.time()
-#             # if (end - start) >= 3:
-#             count += 1
-#             state = "counted"
-#             print(f"Passed endLine → Counted! Total: {count}")
-      
-#       elif state == "counted":
-#         if landmark_y_pixel > startLine + tolerance:
-#           state = "start"
-#           print("restart")
-
-#       orb = cv2.ORB_create(nfeatures=1500)
-#       keypoints, descriptors = orb.detectAndCompute(frame, None)
-#       frame = cv2.drawKeypoints(frame, keypoints, None)
-#       mp_drawing.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-  
-#   # gray = cv2.cvtColor(desiredFrame, cv2.COLOR_BGR2GRAY)
-#   # cv2.line(frame, (0, 250), (815, 250), (0, 255, 0), 2) # green line as start point
-#   # cv2.line(frame, (0, 20), (815, 20), (0, 0, 255), 2) # red line as end point
-
-#   cv2.line(frame, (800, 100), (800, 1000), (0, 255, 0), 2) # green line as start point
-#   cv2.line(frame, (1400, 100), (1400, 1000), (0, 0, 255), 2) # red line as end point
-
-#   cv2.imshow('frame', frame) 
-#   if cv2.waitKey(10) == ord('q'):
-#     break
-
-# cap.release()
-# cv2.destroyAllWindows()
-
 cap = cv2.VideoCapture("./KnobWeird.MOV")
 height, width = 515, 320
 
@@ -145,6 +47,7 @@ if not cap.isOpened():
 
 def draw_enhanced_keypoints_and_matches(frame, template, kp1, kp2, matches):
     # Create a copy for visualization
+    
     vis_frame = frame.copy()
     
     # 1. Draw all keypoints in the frame
