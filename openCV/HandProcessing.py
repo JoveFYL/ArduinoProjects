@@ -16,7 +16,7 @@ class Config:
     startLineY: int = 100
     endLineX: int = 1400
     endLineY: int = 1000
-    cooldownTime: float = 5.0  # seconds
+    cooldownTime: float = 15  # seconds
     direction: str = "vertical"  # "horizontal" or "vertical"
     margin: int = 9 # pixels
     fontSize: int = 1
@@ -154,31 +154,27 @@ def init_mediapipe():
     options = vision.HandLandmarkerOptions(
         base_options=base_options, 
         num_hands=2,
-        min_hand_detection_confidence=0.3,  # Lower from default 0.5
-        min_hand_presence_confidence=0.3,   # Lower from default 0.5
-        min_tracking_confidence=0.3         # Lower from default 0.5
+        min_hand_detection_confidence=0.2,  # Lower from default 0.5
+        min_hand_presence_confidence=0.2,   # Lower from default 0.5
+        min_tracking_confidence=0.2         # Lower from default 0.5
     )
     detector = vision.HandLandmarker.create_from_options(options)
     return detector
 
 def main():
-    vid = "./WhiteTubeAssembly2.MOV" 
+    vid = "./Transparent.MOV" 
     # For horizontal movement (left to right)
     config_horizontal = Config(
         videoPath=vid, 
         direction="horizontal", 
-        startLineX=450,    # Left boundary
-        endLineX=1600,      # Right boundary
-        startLineY=100,    # Not used for horizontal
-        endLineY=600       # Not used for horizontal
+        startLineX=200,    # Left boundary
+        endLineX=1000,      # Right boundary
     )
     
     # For vertical movement (bottom to top)
     config_vertical = Config(
         videoPath=vid, 
         direction="vertical", 
-        startLineX=100,    # Not used for vertical
-        endLineX=800,      # Not used for vertical
         startLineY=500,    # Bottom boundary (start line - higher Y value)
         endLineY=200       # Top boundary (end line - lower Y value)
     )
@@ -222,9 +218,9 @@ def main():
         # Track hand movement
         if detection_result.hand_landmarks:
             for hand_landmarks in detection_result.hand_landmarks:
-                wrist = hand_landmarks[0]  # Wrist landmark
-                if wrist: 
-                    counter.updateState(wrist, frame)
+                for handpart in hand_landmarks:  # Wrist landmark
+                    if handpart: 
+                        counter.updateState(handpart, frame)
 
         # Display count and direction info
         cv2.putText(annotated_image, f"Count: {counter.count}", (10, 30), 
